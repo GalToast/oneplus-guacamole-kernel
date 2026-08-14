@@ -35,7 +35,7 @@ jobs:
       - name: Build kernel Image
         run: |
           cd kernel
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j"$(nproc)" Image
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error -O0 -pipe" -j6 Image
 
       - name: Show vermagic (for module vermagic-matching later)
         run: |
