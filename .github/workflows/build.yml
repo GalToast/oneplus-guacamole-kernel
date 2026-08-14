@@ -7,7 +7,8 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout this repo (workflow + build.config + fix_kconfig.sh)
         uses: actions/checkout@v4
@@ -35,8 +36,11 @@ jobs:
       - name: Build kernel Image
         run: |
           cd kernel
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error -O0 -pipe" -j6 Image
-
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 Image 2>&1 | tail -60
+          rc=${PIPESTATUS[0]}
+          echo "BUILD_RC=$rc"
+          exit $rc
+          test -f arch/arm64/boot/Image && echo IMAGE_OK
       - name: Show vermagic (for module vermagic-matching later)
         run: |
           cd kernel
