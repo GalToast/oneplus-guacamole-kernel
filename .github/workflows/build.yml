@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout this repo (workflow + build.config)
+      - name: Checkout this repo (workflow + build.config + fix_kconfig.sh)
         uses: actions/checkout@v4
 
       - name: Install cross toolchain + build deps
@@ -17,11 +17,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y git make gcc gcc-aarch64-linux-gnu bison flex libssl-dev bc
 
-      - name: Clone OnePlus sm8150 source @ HD1907 commit
+      - name: Clone OnePlus sm8150 source @ Q-branch HEAD (4.14.117)
         run: |
           git clone --filter=blob:none --branch oneplus/SM8150_Q_10.0 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8150.git kernel
-          cd kernel
-          git checkout 1fc6703db23f
+          cd kernel && git checkout 92ce282d017e
+
+      - name: Neutralize sanitized (missing) Kconfig source lines
+        run: bash ../fix_kconfig.sh
 
       - name: Configure (device.config base + FORCE=n)
         run: |
@@ -38,7 +40,7 @@ jobs:
       - name: Show vermagic (for module vermagic-matching later)
         run: |
           cd kernel
-          grep -ao '4\.14[a-zA-Z0-9._+-]* [A-Za-z0-9 ]*' arch/arm64/boot/Image | head -1 || true
+          strings arch/arm64/boot/Image | grep -ao '4\.14[a-zA-Z0-9._+-]* [A-Za-z0-9 ]*' | head -1 || true
           echo "--- utsrelease ---"
           cat include/generated/utsrelease.h || true
 
