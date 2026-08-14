@@ -12,6 +12,19 @@ IMG="artifact2/Image"
 echo "== [0] sanity: Image magic + size =="
 head -c 8 "$IMG" | xxd | head -1
 stat -c '%s bytes' "$IMG"
+python - <<'PY'
+import sys
+D=open('artifact2/Image','rb').read()
+assert len(D)>0x40, 'too small to be an Image'
+magic=D[0x38:0x40]
+avail=['x'.join(['%02x'%b for b in magic])]
+print('magic@0x38:', magic)
+print('uncompressed Image check:', b'ARMd' in magic)
+# also echo possible 'Linux version' string near start
+import re
+m=re.search(rb'Linux version [^\0]{10,80}', D[:0x40000])
+print('version string:', m.group(0).decode('latin1') if m else 'not in first 256KB')
+PY
 
 echo "== [1] push kernel to phone =="
 MSYS_NO_PATHCONV=1 "$ADB" -s $DEV push "$IMG" /data/local/tmp/kernel.new
