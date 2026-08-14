@@ -8,15 +8,16 @@ on:
 jobs:
   build:
     timeout-minutes: 90
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
+    container: ubuntu:20.04
     steps:
       - name: Checkout this repo (workflow + build.config + fix_kconfig.sh)
         uses: actions/checkout@v4
 
       - name: Install cross toolchain + build deps
         run: |
-          sudo apt-get update
-          sudo apt-get install -y git make gcc gcc-aarch64-linux-gnu bison flex libssl-dev bc
+          apt-get update
+          apt-get install -y git make gcc gcc-aarch64-linux-gnu bison flex libssl-dev bc
 
       - name: Clone OnePlus sm8150 source @ Q-branch HEAD (4.14.117)
         run: |
