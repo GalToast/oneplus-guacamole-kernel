@@ -37,7 +37,7 @@ jobs:
       - name: Build kernel Image
         run: |
           cd kernel
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 Image 2>&1 | tail -60
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j"$(nproc)" Image 2>&1 | tail -60
           rc=${PIPESTATUS[0]}
           echo "BUILD_RC=$rc"
           exit $rc
