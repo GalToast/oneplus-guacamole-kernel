@@ -60,7 +60,9 @@ jobs:
             'import os, sys' \
             'os.execvp("gcc", ["gcc"] + sys.argv[1:])' > /kernelsrc/scripts/gcc-wrapper.py
           chmod +x /kernelsrc/scripts/gcc-wrapper.py
-          echo WRAPPER_PASSTHROUGH      - name: Pre-inject timeconst.h + bc shim (bypass GNU-bc hang)
+          echo WRAPPER_PASSTHROUGH
+
+      - name: Pre-inject timeconst.h + bc shim (bypass GNU-bc hang)
         shell: bash
         run: |
           # 1) pre-generate the correct header (gen_timeconst.py is a faithful port of
