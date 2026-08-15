@@ -101,7 +101,8 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE= KCFLAGS="-Wno-undef" -j"$(nproc)" olddefconfig prepare
+          touch .config && make ARCH=arm64 CROSS_COMPILE= KCFLAGS="-Wno-undef" -j"$(nproc)" prepare
+          grep CONFIG_ARM64_PAGE_SHIFT include/generated/autoconf.h || echo NO_PAGE_SHIFT_IN_AUTOCONF
           test -s include/generated/autoconf.h && echo AUTOCONF_OK || { echo AUTOCONF_MISSING; echo "--- generated: ---"; ls include/generated/ | head; exit 1; }
           echo "MARK STAGE1 DONE $(date -u +%H:%M:%S)"
       - name: 'STAGE 2: arch + kernel + init + mm (core)'
