@@ -50,6 +50,7 @@ jobs:
         run: bash "$GITHUB_WORKSPACE/fix_kconfig.sh" /kernelsrc
 
       - name: Pre-inject timeconst.h + bc shim (bypass GNU-bc hang)
+        shell: bash
         run: |
           # 1) pre-generate the correct header (gen_timeconst.py is a faithful port of
           #    kernel/time/timeconst.bc for HZ=100; verified byte-exact by worker B)
