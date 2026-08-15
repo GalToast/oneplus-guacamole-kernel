@@ -47,6 +47,7 @@ jobs:
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
       - name: 'STAGE 1/4: prepare + scripts (headers, asm-offsets)'
+        timeout-minutes: 30
         run: |
           cd /kernelsrc
           export CC="ccache aarch64-linux-gnu-gcc"
@@ -61,6 +62,7 @@ jobs:
           echo "MARK STAGE1 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 2: arch + kernel + init + mm (core)'
+        timeout-minutes: 30
         run: |
           cd /kernelsrc
           export CC="ccache aarch64-linux-gnu-gcc"
@@ -75,6 +77,7 @@ jobs:
           echo "MARK STAGE2 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 3: drivers/net/wireless + net (broad)'
+        timeout-minutes: 30
         run: |
           cd /kernelsrc
           export CC="ccache aarch64-linux-gnu-gcc"
@@ -89,6 +92,7 @@ jobs:
           echo "MARK STAGE3 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 4: full Image (remaining drivers + link)'
+        timeout-minutes: 30
         run: |
           cd /kernelsrc
           export CC="ccache aarch64-linux-gnu-gcc"
