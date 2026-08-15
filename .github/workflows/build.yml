@@ -1,6 +1,6 @@
 name: build-guacamole-kernel
 permissions:
-  contents: write
+  contents: read
 
 on:
   workflow_dispatch:
@@ -43,33 +43,35 @@ jobs:
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
-      - name: Build kernel Image (streaming + live progress beacon)
+      - name: 'STAGE 1/4: prepare + scripts (headers, asm-offsets)'
         run: |
-          export HOME=/tmp
-          git config --global user.email ci@example.com
-          git config --global user.name ci
-
-          WS="$GITHUB_WORKSPACE"
-          echo "tok_len=${#GITHUB_TOKEN}" >> "$WS/beacon.log"
-          echo "# beacon run=$GITHUB_RUN_ID started $(date -u +%H:%M:%S)" >> "$WS/beacon.log"
-
-          (while true; do
-            echo "t=$(date -u +%H:%M:%S) objs=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l) arch=$(find /kernelsrc/arch -name '*.o' 2>/dev/null | wc -l)" >> "$WS/beacon.log"
-            ls /kernelsrc/arch/arm64/boot/ 2>/dev/null | grep Image >> "$WS/beacon.log" || echo "image-not-yet" >> "$WS/beacon.log"
-            git -C "$WS" add beacon.log beacon.err 2>/dev/null
-            git -C "$WS" commit -q -m "beacon $(date -u +%H:%M:%S)" 2>/dev/null
-            OUT=$(git -C "$WS" push -q origin HEAD:refs/heads/progress 2>&1)
-            RC=$?
-            echo "push_rc=$RC $OUT" >> "$WS/beacon.err"
-            echo "PUSH_RC=$RC" >> "$WS/beacon.log"
-            sleep 180
-          done) &
-
           cd /kernelsrc
-          make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" Image 2>&1
+          export CC="ccache aarch64-linux-gnu-gcc"
+          make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" prepare scripts
+          echo "MARK STAGE1 DONE $(date -u +%H:%M:%S)"
+
+      - name: 'STAGE 2: arch + kernel + init + mm (core)'
+        run: |
+          cd /kernelsrc
+          export CC="ccache aarch64-linux-gnu-gcc"
+          make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" kernel/ init/ mm/ arch/arm64/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
+          echo "MARK STAGE2 DONE $(date -u +%H:%M:%S)"
+
+      - name: 'STAGE 3: drivers/net/wireless + net (broad)'
+        run: |
+          cd /kernelsrc
+          export CC="ccache aarch64-linux-gnu-gcc"
+          make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" drivers/net/ drivers/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
+          echo "MARK STAGE3 DONE $(date -u +%H:%M:%S)"
+
+      - name: 'STAGE 4: full Image (remaining drivers + link)'
+        run: |
+          cd /kernelsrc
+          export CC="ccache aarch64-linux-gnu-gcc"
+          make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" Image 2>&1 | tee -a /kernelsrc/build.log | tail -8
           rc=$?
-          echo "BUILD_RC=$rc"
-          ls -la /kernelsrc/arch/arm64/boot/Image
+          echo "MARK STAGE4 rc=$rc $(date -u +%H:%M:%S)"
+          ls -la arch/arm64/boot/Image
           exit $rc
 
       - name: Show vermagic (for module vermagic-matching later)
@@ -84,10 +86,10 @@ jobs:
           name: kernel-image
           path: /kernelsrc/arch/arm64/boot/Image
 
-      - name: Upload beacon diag (always, even on failure)
-        if: always()
+      - name: Upload image-absent tail (always, even on failure)
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: beacon-diag
-          path: ${{ github.workspace }}/beacon.log
+          name: build-tail
+          path: /kernelsrc/build.log
         continue-on-error: true
