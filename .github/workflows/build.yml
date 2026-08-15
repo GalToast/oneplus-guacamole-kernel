@@ -101,7 +101,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE= -j"$(nproc)" prepare scripts
+          make ARCH=arm64 CROSS_COMPILE= -j"$(nproc)" prepare
           echo "MARK STAGE1 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 2: arch + kernel + init + mm (core)'
