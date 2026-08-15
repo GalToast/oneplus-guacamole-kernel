@@ -15,9 +15,6 @@ jobs:
     steps:
       - name: Checkout this repo (workflow + build.config + fix_kconfig.sh)
         uses: actions/checkout@v4
-        with:
-          persist-credentials: true
-          token: \${{ github.token }}
 
       - name: Install cross toolchain + build deps
         run: |
