@@ -12,6 +12,9 @@ jobs:
   build:
     timeout-minutes: 400
     runs-on: ubuntu-22.04-arm
+    container:
+      image: ubuntu:22.04
+      options: --user root
     env:
       GITHUB_TOKEN_OUT: ${{ github.token }}
     steps:
@@ -21,14 +24,13 @@ jobs:
       - name: Install cross toolchain + build deps
         run: |
           apt-get update
-          apt-get install -y sudo 2>/dev/null || true
+          rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock 2>/dev/null || true
           for i in $(seq 1 20); do
-            sudo rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock 2>/dev/null || true
-            sudo apt-get update 2>/tmp/apt.err && break
-            echo "apt retry $i: $(tail -1 /tmp/apt.err) ($(date -u +%H:%M:%S))"
+            apt-get update 2>/tmp/apt.err && break
+            echo "apt retry $i: $(tail -1 /tmp/apt.err) $(date -u +%H:%M:%S)"
             sleep 30
           done
-          sudo apt-get install -y git make gcc bison flex libssl-dev bc python3 ccache procps file curl
+          apt-get install -y git make gcc bison flex libssl-dev bc python3 ccache procps file curl
 
       - name: ccache cache (persist objects across runs)
         uses: actions/cache@v4
@@ -39,7 +41,7 @@ jobs:
 
       - name: Clone OnePlus sm8150 source @ Q-branch HEAD (4.14.117)
         run: |
-          sudo mkdir -p /kernelsrc && sudo chown \$(id -u):\$(id -g) /kernelsrc && git clone --depth 1 --branch oneplus/SM8150_Q_10.0 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8150.git /kernelsrc
+          mkdir -p /kernelsrc && git clone --depth 1 --branch oneplus/SM8150_Q_10.0 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8150.git /kernelsrc
           cd /kernelsrc && git checkout 92ce282d017e
 
       - name: Neutralize sanitized (missing) Kconfig source lines
