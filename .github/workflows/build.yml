@@ -55,14 +55,22 @@ jobs:
           echo "# beacon $(date -u +%H:%M:%S) run=$GITHUB_RUN_ID" >> "$WS/beacon.log"
 
           (while true; do
-            { echo "t=$(date -u +%H:%M:%S)";
-              echo "objs=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)";
-              echo "arch_objs=$(find /kernelsrc/arch -name '*.o' 2>/dev/null | wc -l)";
-              ls /kernelsrc/arch/arm64/boot/ 2>/dev/null | grep Image || echo image-not-yet; } >> "$WS/beacon.log"
+            echo "t=$(date -u +%H:%M:%S)" >> "$WS/beacon.log"
+            echo "objs=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)" >> "$WS/beacon.log"
+            echo "arch_objs=$(find /kernelsrc/arch -name '*.o' 2>/dev/null | wc -l)" >> "$WS/beacon.log"
+            ls /kernelsrc/arch/arm64/boot/ 2>/dev/null | grep Image >> "$WS/beacon.log" || echo image-not-yet >> "$WS/beacon.log"
             git -C "$WS" add beacon.log 2>/dev/null
             git -C "$WS" commit -q -m "beacon $(date -u +%H:%M:%S)" 2>/dev/null
             git -C "$WS" push -q origin HEAD:progress 2>>"$WS/beacon.err" || echo "PUSHFAIL $(date -u +%H:%M:%S)" >> "$WS/beacon.err"
-            sleep 180          done) &
+            sleep 180
+          done) &
+
+          cd /kernelsrc
+          make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" Image 2>&1
+          rc=$?
+          echo "BUILD_RC=$rc"
+          ls -la /kernelsrc/arch/arm64/boot/Image
+          exit $rc
 
           cd /kernelsrc
           make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" Image 2>&1
