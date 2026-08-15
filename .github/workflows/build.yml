@@ -52,13 +52,15 @@ jobs:
       - name: Neutralize sanitized (missing) Kconfig source lines
         run: bash "$GITHUB_WORKSPACE/fix_kconfig.sh" /kernelsrc
 
-      - name: Loosen gcc-wrapper warning gate (vendor allows NO warnings; we use stock gcc)
+      - name: Loosen gcc-wrapper warning gate (make it a pure gcc passthrough)
         shell: bash
         run: |
-          python3 -c "p='/kernelsrc/scripts/gcc-wrapper.py'; s=open(p).read(); s=s.replace('allowed_warnings = set([', 'allowed_warnings = set([\"*\"'); open(p, 'w').write(s); print('wrapper patched:', '\"*\"' in open(p).read())" 2>/dev/null || echo WRAPPER_PATCH_FAILED
-          head -3 /kernelsrc/scripts/gcc-wrapper.py >/dev/null 2>&1 && echo WRAPPER_PRESENT
-
-      - name: Pre-inject timeconst.h + bc shim (bypass GNU-bc hang)
+          # Vendor gcc-wrapper forbids ANY warning; swap it for a pure gcc passthrough.
+          printf '%s\n' '#!/usr/bin/env python3' \
+            'import os, sys' \
+            'os.execvp("gcc", ["gcc"] + sys.argv[1:])' > /kernelsrc/scripts/gcc-wrapper.py
+          chmod +x /kernelsrc/scripts/gcc-wrapper.py
+          echo WRAPPER_PASSTHROUGH      - name: Pre-inject timeconst.h + bc shim (bypass GNU-bc hang)
         shell: bash
         run: |
           # 1) pre-generate the correct header (gen_timeconst.py is a faithful port of
