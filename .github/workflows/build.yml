@@ -88,25 +88,7 @@ jobs:
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
           make ARCH=arm64 CROSS_COMPILE= olddefconfig
 
-      - name: Smoke compiler probe (direct gcc + bounds.s with 120s cap)
-        timeout-minutes: 5
-        run: |
-          echo "=== toolchain ==="
-          gcc --version | head -1
-          which gcc python python3
-          python --version
-          echo "=== direct gcc probe ==="
-          echo 'int x;' > /tmp/t.c
-          timeout 5 gcc -c -o /tmp/t.o /tmp/t.c && echo GCC_DIRECT_OK || echo GCC_DIRECT_HUNG
-          echo "=== bounds.s kbuild V=1, 120s cap ==="
-          cd /kernelsrc
-          timeout 120 make ARCH=arm64 CROSS_COMPILE= V=1 -j1 kernel/bounds.s 2>&1 | tail -14
-          rc=${PIPESTATUS[0]:-$?}
-          echo "SMOKE_RC=$rc"
-          exit 0
-
-      - name: 'STAGE 1/4: prepare + scripts (headers, asm-offsets)'
-        timeout-minutes: 30
+      - name: 'STAGE 1/4: prepare + scripts (headers, asm-offsets)'        timeout-minutes: 30
         run: |
           mkdir -p /oneplus   # OnePlus Makefile: cp $(KBUILD_SRC)/../oneplus -> parent; empty stub satisfies it
           cd /kernelsrc
