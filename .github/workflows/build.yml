@@ -60,7 +60,7 @@ jobs:
             'import os, sys' \
             'os.execvp(sys.argv[1], sys.argv[1:])' > /kernelsrc/scripts/gcc-wrapper.py
           chmod +x /kernelsrc/scripts/gcc-wrapper.py
-echo WRAPPER_PASSTHROUGH
+          echo WRAPPER_PASSTHROUGH
 
       - name: Pre-inject timeconst.h + bc shim (bypass GNU-bc hang)
         shell: bash
