@@ -58,9 +58,9 @@ jobs:
           # Vendor gcc-wrapper forbids ANY warning; swap it for a pure gcc passthrough.
           printf '%s\n' '#!/usr/bin/env python3' \
             'import os, sys' \
-            'os.execvp("gcc", ["gcc"] + sys.argv[1:])' > /kernelsrc/scripts/gcc-wrapper.py
+            'os.execvp(sys.argv[1], sys.argv[1:])' > /kernelsrc/scripts/gcc-wrapper.py
           chmod +x /kernelsrc/scripts/gcc-wrapper.py
-          echo WRAPPER_PASSTHROUGH
+echo WRAPPER_PASSTHROUGH
 
       - name: Pre-inject timeconst.h + bc shim (bypass GNU-bc hang)
         shell: bash
