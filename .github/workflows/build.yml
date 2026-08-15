@@ -88,7 +88,8 @@ jobs:
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
           make ARCH=arm64 CROSS_COMPILE= olddefconfig
 
-      - name: 'STAGE 1/4: prepare + scripts (headers, asm-offsets)'        timeout-minutes: 30
+      - name: 'STAGE 1/4: prepare + scripts (headers, asm-offsets)'
+        timeout-minutes: 30
         run: |
           mkdir -p /oneplus   # OnePlus Makefile: cp $(KBUILD_SRC)/../oneplus -> parent; empty stub satisfies it
           cd /kernelsrc
