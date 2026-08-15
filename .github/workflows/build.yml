@@ -32,12 +32,12 @@ jobs:
           cd /kernelsrc && git checkout 92ce282d017e
 
       - name: Neutralize sanitized (missing) Kconfig source lines
-        run: bash ./fix_kconfig.sh /kernelsrc
+        run: bash "$GITHUB_WORKSPACE/fix_kconfig.sh" /kernelsrc
 
       - name: Configure (device.config base + FORCE=n)
         run: |
+          cp "$GITHUB_WORKSPACE/build.config" /kernelsrc/.config
           cd /kernelsrc
-          cp ../build.config .config
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
