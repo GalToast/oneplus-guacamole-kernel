@@ -49,6 +49,7 @@ jobs:
       - name: 'STAGE 1/4: prepare + scripts (headers, asm-offsets)'
         timeout-minutes: 30
         run: |
+          mkdir -p /oneplus   # OnePlus Makefile: cp $(KBUILD_SRC)/../oneplus -> parent; empty stub satisfies it
           cd /kernelsrc
           export CC="ccache aarch64-linux-gnu-gcc"
 
@@ -64,6 +65,7 @@ jobs:
       - name: 'STAGE 2: arch + kernel + init + mm (core)'
         timeout-minutes: 30
         run: |
+          mkdir -p /oneplus
           cd /kernelsrc
           export CC="ccache aarch64-linux-gnu-gcc"
 
@@ -79,6 +81,7 @@ jobs:
       - name: 'STAGE 3: drivers/net/wireless + net (broad)'
         timeout-minutes: 30
         run: |
+          mkdir -p /oneplus
           cd /kernelsrc
           export CC="ccache aarch64-linux-gnu-gcc"
 
@@ -94,6 +97,7 @@ jobs:
       - name: 'STAGE 4: full Image (remaining drivers + link)'
         timeout-minutes: 30
         run: |
+          mkdir -p /oneplus
           cd /kernelsrc
           export CC="ccache aarch64-linux-gnu-gcc"
 
