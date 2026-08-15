@@ -17,6 +17,7 @@ jobs:
       options: --user root
     env:
       GITHUB_TOKEN_OUT: ${{ github.token }}
+      TIMECONST_HEADER: /kernelsrc/include/generated/timeconst.h
     steps:
       - name: Checkout this repo (workflow + build.config + fix_kconfig.sh)
         uses: actions/checkout@v4
@@ -48,19 +49,34 @@ jobs:
       - name: Neutralize sanitized (missing) Kconfig source lines
         run: bash "$GITHUB_WORKSPACE/fix_kconfig.sh" /kernelsrc
 
-      - name: Pre-inject timeconst.h (bypass GNU-bc hang)
+      - name: Pre-inject timeconst.h + bc shim (bypass GNU-bc hang)
         run: |
+          # 1) pre-generate the correct header (gen_timeconst.py is a faithful port of
+          #    kernel/time/timeconst.bc for HZ=100; verified byte-exact by worker B)
           mkdir -p /kernelsrc/include/generated
           python "$GITHUB_WORKSPACE/gen_timeconst.py" 100 > /kernelsrc/include/generated/timeconst.h
-          # Replace the bc generator in the top-level Kbuild with a no-op cat of the
-          # pre-made header (GNU bc hangs on this vendor's timeconst.bc; content is
-          # deterministic and identical).
-          sed -i 's|(echo $(CONFIG_HZ) | bc -q $< ) > $@|cp /kernelsrc/include/generated/timeconst.h $@|' /kernelsrc/Kbuild
-          sed -i 's|(echo $(CONFIG_HZ) | bc -q $< )|cat /kernelsrc/include/generated/timeconst.h|' /kernelsrc/Kbuild
-          grep -n 'timeconst' /kernelsrc/Kbuild | head -4
+          # 2) install a PATH-first bc shim so kbuild's `(echo $HZ | bc -q ...)` recipe
+          #    emits the pre-generated header instead of hanging GNU bc on the vendor's
+          #    timeconst.bc. (Verified: only this one recipe uses bc in the whole tree.)
+          mv /usr/bin/bc /usr/bin/bc.real
+          cat > /usr/local/bin/bc <<'SHIM'
+          #!/bin/bash
+          set -e
+          if [ -n "$TIMECONST_HEADER" ] && [ -f "$TIMECONST_HEADER" ]; then
+            cat "$TIMECONST_HEADER"
+            exit 0
+          fi
+          exec /usr/bin/bc.real "$@"
+          SHIM
+          chmod +x /usr/local/bin/bc
+          export TIMECONST_HEADER=/kernelsrc/include/generated/timeconst.h
+          echo "TIMECONST_HEADER=$TIMECONST_HEADER"
+          echo "=== shim present? ==="
+          type -a bc
+          echo "=== shim self-test (must return header, not hang) ==="
+          echo 100 | bc -q /dev/null | head -3
           head -3 /kernelsrc/include/generated/timeconst.h
           echo TIMECONST_INJECTED
-
       - name: Configure (device.config base + FORCE=n)
         run: |
           cp "$GITHUB_WORKSPACE/build.config" /kernelsrc/.config
