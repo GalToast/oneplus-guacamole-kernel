@@ -32,7 +32,7 @@ jobs:
           cd /kernelsrc && git checkout 92ce282d017e
 
       - name: Neutralize sanitized (missing) Kconfig source lines
-        run: bash ./fix_kconfig.sh
+        run: bash ./fix_kconfig.sh /kernelsrc
 
       - name: Configure (device.config base + FORCE=n)
         run: |

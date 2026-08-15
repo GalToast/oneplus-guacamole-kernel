@@ -7,8 +7,10 @@
 # so the missing options simply become undefined (dropped to 'n') instead of
 # breaking the config step. Run from the repo root (expects ./kernel).
 set -e
-cd "$(dirname "$0")/kernel"
-echo "fix_kconfig: scanning Kconfig files for missing source targets..."
+cd "$(dirname "$0")"
+KSRC="${1:-kernel}"
+cd "$KSRC" || { echo "fix_kconfig: no dir $KSRC"; exit 1; }
+echo "fix_kconfig: scanning Kconfig files in $KSRC..."
 count=0
 find . -name Kconfig | while read -r f; do
   dir=$(dirname "$f")
