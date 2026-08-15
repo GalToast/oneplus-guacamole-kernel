@@ -46,12 +46,21 @@ jobs:
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
+      - name: Smoke - compiler sanity (the exact file that hung: kernel/bounds.c)
+        run: |
+          cd /kernelsrc
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j1 kernel/bounds.s
+          rc=$?
+          echo "SMOKE_BOUNDS_RC=$rc"
+          ls -la kernel/bounds.s 2>/dev/null || echo "NO bounds.s"
+          exit $rc
+
       - name: 'STAGE 1/4: prepare + scripts (headers, asm-offsets)'
         timeout-minutes: 30
         run: |
           mkdir -p /oneplus   # OnePlus Makefile: cp $(KBUILD_SRC)/../oneplus -> parent; empty stub satisfies it
           cd /kernelsrc
-          export CC="ccache aarch64-linux-gnu-gcc"
+          export CC="aarch64-linux-gnu-gcc"
 
           (while true; do
             O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
@@ -59,7 +68,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" prepare scripts
+          make ARCH=arm64 CROSS_COMPILE='aarch64-linux-gnu-' -j"$(nproc)" prepare scripts
           echo "MARK STAGE1 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 2: arch + kernel + init + mm (core)'
@@ -67,7 +76,7 @@ jobs:
         run: |
           mkdir -p /oneplus
           cd /kernelsrc
-          export CC="ccache aarch64-linux-gnu-gcc"
+          export CC="aarch64-linux-gnu-gcc"
 
           (while true; do
             O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
@@ -75,7 +84,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" kernel/ init/ mm/ arch/arm64/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
+          make ARCH=arm64 CROSS_COMPILE='aarch64-linux-gnu-' -j"$(nproc)" kernel/ init/ mm/ arch/arm64/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
           echo "MARK STAGE2 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 3: drivers/net/wireless + net (broad)'
@@ -83,7 +92,7 @@ jobs:
         run: |
           mkdir -p /oneplus
           cd /kernelsrc
-          export CC="ccache aarch64-linux-gnu-gcc"
+          export CC="aarch64-linux-gnu-gcc"
 
           (while true; do
             O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
@@ -91,7 +100,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" drivers/net/ drivers/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
+          make ARCH=arm64 CROSS_COMPILE='aarch64-linux-gnu-' -j"$(nproc)" drivers/net/ drivers/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
           echo "MARK STAGE3 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 4: full Image (remaining drivers + link)'
@@ -99,7 +108,7 @@ jobs:
         run: |
           mkdir -p /oneplus
           cd /kernelsrc
-          export CC="ccache aarch64-linux-gnu-gcc"
+          export CC="aarch64-linux-gnu-gcc"
 
           (while true; do
             O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
@@ -107,7 +116,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" Image 2>&1 | tee -a /kernelsrc/build.log | tail -8
+          make ARCH=arm64 CROSS_COMPILE='aarch64-linux-gnu-' -j"$(nproc)" Image 2>&1 | tee -a /kernelsrc/build.log | tail -8
           rc=$?
           echo "MARK STAGE4 rc=$rc $(date -u +%H:%M:%S)"
           ls -la arch/arm64/boot/Image
