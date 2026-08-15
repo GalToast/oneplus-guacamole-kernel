@@ -52,7 +52,12 @@ jobs:
         run: |
           mkdir -p /kernelsrc/include/generated
           python "$GITHUB_WORKSPACE/gen_timeconst.py" 100 > /kernelsrc/include/generated/timeconst.h
-          touch -d '2099-01-01' /kernelsrc/include/generated/timeconst.h
+          # Replace the bc generator in the top-level Kbuild with a no-op cat of the
+          # pre-made header (GNU bc hangs on this vendor's timeconst.bc; content is
+          # deterministic and identical).
+          sed -i 's|(echo $(CONFIG_HZ) | bc -q $< ) > $@|cp /kernelsrc/include/generated/timeconst.h $@|' /kernelsrc/Kbuild
+          sed -i 's|(echo $(CONFIG_HZ) | bc -q $< )|cat /kernelsrc/include/generated/timeconst.h|' /kernelsrc/Kbuild
+          grep -n 'timeconst' /kernelsrc/Kbuild | head -4
           head -3 /kernelsrc/include/generated/timeconst.h
           echo TIMECONST_INJECTED
 
