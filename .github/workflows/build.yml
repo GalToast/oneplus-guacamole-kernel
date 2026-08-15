@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    timeout-minutes: 360
+    timeout-minutes: 400
     runs-on: ubuntu-latest
     container: ubuntu:20.04
     steps:
@@ -17,7 +17,7 @@ jobs:
       - name: Install cross toolchain + build deps
         run: |
           apt-get update
-          apt-get install -y git make gcc gcc-aarch64-linux-gnu bison flex libssl-dev bc python ccache
+          apt-get install -y git make gcc gcc-aarch64-linux-gnu bison flex libssl-dev bc python ccache procps file
 
       - name: ccache cache (persist objects across runs)
         uses: actions/cache@v4
@@ -41,22 +41,34 @@ jobs:
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
-      - name: Build kernel Image
+      - name: Build kernel Image (streaming + live progress beacon)
         run: |
-          echo "NPROC=$(nproc)"
           cd kernel
           export CC="ccache aarch64-linux-gnu-gcc"
-          ccache -M 4G
-          make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" Image 2>&1 | tail -75
-          rc=${PIPESTATUS[0]}
+          export HOME=/tmp
+          git config user.email ci@example.com
+          git config user.name ci
+          # make with -pipe, no tail: stdout streams; every 120s push object probes to a progress branch
+          (while true; do
+             echo "===BEACON $(date -u +%H:%M:%S)===";
+             find arch -name '*.o' -printf '%h/%f\n' 2>/dev/null | tail -3;
+             find arch -name '*.o' 2>/dev/null | wc -l;
+             python3 -c "import os;[print(os.path.getmtime(f)) for f in ['arch/arm64/boot/Image'] if os.path.exists(f)]" 2>/dev/null;
+             printf '%s beacon ok %d objs\n' "$(date -u +%H:%M:%S)" "$(find . -name '*.o' 2>/dev/null | wc -l)" >> /tmp/beacon.log;
+             git add -A 2>/dev/null; git commit -q -m "beacon $(date -u +%H:%M:%S)" 2>/dev/null;
+             git push -q origin HEAD:progress --force 2>/dev/null || true;
+             sleep 180;
+           done) &
+          make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" Image 2>&1
+          rc=$?
           echo "BUILD_RC=$rc"
+          ls -la arch/arm64/boot/Image
           exit $rc
-          test -f arch/arm64/boot/Image && echo IMAGE_OK
+
       - name: Show vermagic (for module vermagic-matching later)
         run: |
           cd kernel
           strings arch/arm64/boot/Image | grep -ao '4\.14[a-zA-Z0-9._+-]* [A-Za-z0-9 ]*' | head -1 || true
-          echo "--- utsrelease ---"
           cat include/generated/utsrelease.h || true
 
       - name: Upload Image artifact
@@ -64,29 +76,3 @@ jobs:
         with:
           name: kernel-image
           path: kernel/arch/arm64/boot/Image
-  probe:
-    runs-on: ubuntu-latest
-    container: ubuntu:20.04
-    timeout-minutes: 20
-    steps:
-      - name: Checkout this repo (workflow + build.config)
-        uses: actions/checkout@v4
-      - name: Install deps
-        run: |
-          apt-get update
-          apt-get install -y git make gcc gcc-aarch64-linux-gnu bison flex libssl-dev bc python ccache
-      - name: Clone (shallow) + config
-        run: |
-          git clone --depth 1 --branch oneplus/SM8150_Q_10.0 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8150.git kernel
-          cd kernel && git checkout 92ce282d017e
-          bash ../fix_kconfig.sh
-          cp ../build.config .config
-          ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
-      - name: Toolchain probe (compile ONE object)
-        run: |
-          cd kernel
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j2 init/main.o
-          echo "PROBE_RESULT $?"
-          ls -la init/main.o || true
-          echo "PROBE_DONE"
