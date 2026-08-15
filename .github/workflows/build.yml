@@ -11,8 +11,7 @@ on:
 jobs:
   build:
     timeout-minutes: 400
-    runs-on: ubuntu-latest
-    container: ubuntu:20.04
+    runs-on: ubuntu-22.04-arm64
     env:
       GITHUB_TOKEN_OUT: ${{ github.token }}
     steps:
@@ -22,7 +21,8 @@ jobs:
       - name: Install cross toolchain + build deps
         run: |
           apt-get update
-          apt-get install -y git make gcc gcc-aarch64-linux-gnu bison flex libssl-dev bc python ccache procps file curl
+          apt-get update
+          apt-get install -y git make gcc bison flex libssl-dev bc python3 ccache procps file curl
 
       - name: ccache cache (persist objects across runs)
         uses: actions/cache@v4
@@ -44,12 +44,12 @@ jobs:
           cp "$GITHUB_WORKSPACE/build.config" /kernelsrc/.config
           cd /kernelsrc
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+          make ARCH=arm64 CROSS_COMPILE= olddefconfig
 
       - name: Smoke bounds compile
         run: |
           cd /kernelsrc
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j1 kernel/bounds.s
+          make ARCH=arm64 CROSS_COMPILE= -j1 kernel/bounds.s
           rc=$?
           echo "SMOKE_BOUNDS_RC=$rc"
           ls -la kernel/bounds.s 2>/dev/null || echo "NO bounds.s"
@@ -60,7 +60,7 @@ jobs:
         run: |
           mkdir -p /oneplus   # OnePlus Makefile: cp $(KBUILD_SRC)/../oneplus -> parent; empty stub satisfies it
           cd /kernelsrc
-          export CC="aarch64-linux-gnu-gcc"
+          export CC=gcc
 
           (while true; do
             O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
@@ -68,7 +68,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE='aarch64-linux-gnu-' -j"$(nproc)" prepare scripts
+          make ARCH=arm64 CROSS_COMPILE= -j"$(nproc)" prepare scripts
           echo "MARK STAGE1 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 2: arch + kernel + init + mm (core)'
@@ -76,7 +76,7 @@ jobs:
         run: |
           mkdir -p /oneplus
           cd /kernelsrc
-          export CC="aarch64-linux-gnu-gcc"
+          export CC=gcc
 
           (while true; do
             O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
@@ -84,7 +84,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE='aarch64-linux-gnu-' -j"$(nproc)" kernel/ init/ mm/ arch/arm64/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
+          make ARCH=arm64 CROSS_COMPILE= -j"$(nproc)" kernel/ init/ mm/ arch/arm64/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
           echo "MARK STAGE2 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 3: drivers/net/wireless + net (broad)'
@@ -92,7 +92,7 @@ jobs:
         run: |
           mkdir -p /oneplus
           cd /kernelsrc
-          export CC="aarch64-linux-gnu-gcc"
+          export CC=gcc
 
           (while true; do
             O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
@@ -100,7 +100,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE='aarch64-linux-gnu-' -j"$(nproc)" drivers/net/ drivers/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
+          make ARCH=arm64 CROSS_COMPILE= -j"$(nproc)" drivers/net/ drivers/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
           echo "MARK STAGE3 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 4: full Image (remaining drivers + link)'
@@ -108,7 +108,7 @@ jobs:
         run: |
           mkdir -p /oneplus
           cd /kernelsrc
-          export CC="aarch64-linux-gnu-gcc"
+          export CC=gcc
 
           (while true; do
             O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
@@ -116,7 +116,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE='aarch64-linux-gnu-' -j"$(nproc)" Image 2>&1 | tee -a /kernelsrc/build.log | tail -8
+          make ARCH=arm64 CROSS_COMPILE= -j"$(nproc)" Image 2>&1 | tee -a /kernelsrc/build.log | tail -8
           rc=$?
           echo "MARK STAGE4 rc=$rc $(date -u +%H:%M:%S)"
           ls -la arch/arm64/boot/Image
