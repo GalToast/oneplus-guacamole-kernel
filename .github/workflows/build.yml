@@ -57,7 +57,8 @@ jobs:
           # 1) pre-generate the correct header (gen_timeconst.py is a faithful port of
           #    kernel/time/timeconst.bc for HZ=100; verified byte-exact by worker B)
           mkdir -p /kernelsrc/include/generated
-          python "$GITHUB_WORKSPACE/gen_timeconst.py" 100 > /kernelsrc/include/generated/timeconst.h
+          python3 "$GITHUB_WORKSPACE/gen_timeconst.py" 100 > /kernelsrc/include/generated/timeconst.h
+          test -s /kernelsrc/include/generated/timeconst.h && echo HEADER_OK || { echo HEADER_MISSING; exit 1; }
           # 2) install a PATH-first bc shim so kbuild's `(echo $HZ | bc -q ...)` recipe
           #    emits the pre-generated header instead of hanging GNU bc on the vendor's
           #    timeconst.bc. (Verified: only this one recipe uses bc in the whole tree.)
