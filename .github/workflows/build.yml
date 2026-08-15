@@ -167,7 +167,11 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-undef" -j"$(nproc)" Image 2>&1 | tee -a /kernelsrc/build.log | tail -8
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-undef" V=1 -j"$(nproc)" Image 2>&1 | tee -a /kernelsrc/build.log | tail -25
+          rc=${PIPESTATUS[0]:-$?}
+          echo "MARK STAGE4 rc=$rc $(date -u +%H:%M:%S)"
+          ls -la arch/arm64/boot/Image && echo IMAGE_OK
+          exit $rc
           rc=$?
           echo "MARK STAGE4 rc=$rc $(date -u +%H:%M:%S)"
           ls -la arch/arm64/boot/Image
