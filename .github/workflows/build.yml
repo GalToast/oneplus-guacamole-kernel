@@ -21,7 +21,8 @@ jobs:
       - name: Install cross toolchain + build deps
         run: |
           apt-get update
-          apt-get update
+          rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock /var/lib/dpkg/lock 2>/dev/null || true
+          apt-get update || { sleep 30; rm -f /var/lib/apt/lists/lock /var/cache/apt/archives/lock; apt-get update; }
           apt-get install -y git make gcc bison flex libssl-dev bc python3 ccache procps file curl
 
       - name: ccache cache (persist objects across runs)
