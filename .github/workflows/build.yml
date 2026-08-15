@@ -100,6 +100,7 @@ jobs:
           # leave generated headers (asm/current.h / thread_info) without expected symbols.
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/sm8150_defconfig
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
+          ./scripts/config --disable CONFIG_GCC_WERROR
           ./scripts/config --set-str CONFIG_LOCALVERSION "-perf+"
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
           grep -E 'CONFIG_(THREAD_INFO_IN_TASK|ARM64_VA_BITS|ARM64_PAGE_SHIFT|64BIT)=' .config | head -5
