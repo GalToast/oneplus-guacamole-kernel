@@ -1,6 +1,7 @@
 name: build-guacamole-kernel
 permissions:
   contents: read
+  statuses: write
 
 on:
   workflow_dispatch:
@@ -47,6 +48,13 @@ jobs:
         run: |
           cd /kernelsrc
           export CC="ccache aarch64-linux-gnu-gcc"
+
+          (while true; do
+            O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
+            curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json"               "https://api.github.com/repos/GalToast/oneplus-guacamole-kernel/statuses/$GITHUB_SHA"               -d '{"state":"pending","context":"kernel-build-progress","description":"objs='"$O"'"}' >/dev/null 2>&1
+            sleep 45
+          done) &
+
           make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" prepare scripts
           echo "MARK STAGE1 DONE $(date -u +%H:%M:%S)"
 
@@ -54,6 +62,13 @@ jobs:
         run: |
           cd /kernelsrc
           export CC="ccache aarch64-linux-gnu-gcc"
+
+          (while true; do
+            O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
+            curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json"               "https://api.github.com/repos/GalToast/oneplus-guacamole-kernel/statuses/$GITHUB_SHA"               -d '{"state":"pending","context":"kernel-build-progress","description":"objs='"$O"'"}' >/dev/null 2>&1
+            sleep 45
+          done) &
+
           make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" kernel/ init/ mm/ arch/arm64/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
           echo "MARK STAGE2 DONE $(date -u +%H:%M:%S)"
 
@@ -61,6 +76,13 @@ jobs:
         run: |
           cd /kernelsrc
           export CC="ccache aarch64-linux-gnu-gcc"
+
+          (while true; do
+            O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
+            curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json"               "https://api.github.com/repos/GalToast/oneplus-guacamole-kernel/statuses/$GITHUB_SHA"               -d '{"state":"pending","context":"kernel-build-progress","description":"objs='"$O"'"}' >/dev/null 2>&1
+            sleep 45
+          done) &
+
           make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" drivers/net/ drivers/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
           echo "MARK STAGE3 DONE $(date -u +%H:%M:%S)"
 
@@ -68,6 +90,13 @@ jobs:
         run: |
           cd /kernelsrc
           export CC="ccache aarch64-linux-gnu-gcc"
+
+          (while true; do
+            O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
+            curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json"               "https://api.github.com/repos/GalToast/oneplus-guacamole-kernel/statuses/$GITHUB_SHA"               -d '{"state":"pending","context":"kernel-build-progress","description":"objs='"$O"'"}' >/dev/null 2>&1
+            sleep 45
+          done) &
+
           make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" Image 2>&1 | tee -a /kernelsrc/build.log | tail -8
           rc=$?
           echo "MARK STAGE4 rc=$rc $(date -u +%H:%M:%S)"
