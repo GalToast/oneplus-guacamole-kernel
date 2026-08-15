@@ -31,8 +31,10 @@ jobs:
             echo "apt retry $i: $(tail -1 /tmp/apt.err) $(date -u +%H:%M:%S)"
             sleep 30
           done
-          apt-get install -y git make gcc bison flex libssl-dev bc python3 ccache procps file curl
-          ln -sf /usr/bin/python3 /usr/bin/python || true
+          apt-get install -y git make gcc bison flex libssl-dev python3 ccache procps file curl
+          apt-get install -y python2 2>/dev/null || echo '(python2 unavailable on this dist - py3 fallback)'          # vendor gcc-wrapper.py uses py2 syntax (print >>) - need python2 as 'python'
+          if [ -x /usr/bin/python2 ]; then ln -sf /usr/bin/python2 /usr/bin/python; else ln -sf /usr/bin/python3 /usr/bin/python; fi
+          python --version
 
       - name: ccache cache (persist objects across runs)
         uses: actions/cache@v4
