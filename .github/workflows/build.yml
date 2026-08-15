@@ -101,7 +101,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE= -j"$(nproc)" olddefconfig prepare
+          make ARCH=arm64 CROSS_COMPILE= KCFLAGS="-Wno-undef" -j"$(nproc)" olddefconfig prepare
           test -s include/generated/autoconf.h && echo AUTOCONF_OK || { echo AUTOCONF_MISSING; echo "--- generated: ---"; ls include/generated/ | head; exit 1; }
           echo "MARK STAGE1 DONE $(date -u +%H:%M:%S)"
       - name: 'STAGE 2: arch + kernel + init + mm (core)'
@@ -117,7 +117,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE= -j"$(nproc)" kernel/ init/ mm/ arch/arm64/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
+          make ARCH=arm64 CROSS_COMPILE= KCFLAGS="-Wno-undef" -j"$(nproc)" kernel/ init/ mm/ arch/arm64/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
           echo "MARK STAGE2 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 3: drivers/net/wireless + net (broad)'
@@ -133,7 +133,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE= -j"$(nproc)" drivers/net/ drivers/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
+          make ARCH=arm64 CROSS_COMPILE= KCFLAGS="-Wno-undef" -j"$(nproc)" drivers/net/ drivers/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
           echo "MARK STAGE3 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 4: full Image (remaining drivers + link)'
@@ -149,7 +149,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE= -j"$(nproc)" Image 2>&1 | tee -a /kernelsrc/build.log | tail -8
+          make ARCH=arm64 CROSS_COMPILE= KCFLAGS="-Wno-undef" -j"$(nproc)" Image 2>&1 | tee -a /kernelsrc/build.log | tail -8
           rc=$?
           echo "MARK STAGE4 rc=$rc $(date -u +%H:%M:%S)"
           ls -la arch/arm64/boot/Image
