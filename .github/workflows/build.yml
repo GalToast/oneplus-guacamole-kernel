@@ -58,16 +58,16 @@ jobs:
           # 2) install a PATH-first bc shim so kbuild's `(echo $HZ | bc -q ...)` recipe
           #    emits the pre-generated header instead of hanging GNU bc on the vendor's
           #    timeconst.bc. (Verified: only this one recipe uses bc in the whole tree.)
-          mv /usr/bin/bc /usr/bin/bc.real
-          cat > /usr/local/bin/bc <<'SHIM'
-          #!/bin/bash
-          set -e
-          if [ -n "$TIMECONST_HEADER" ] && [ -f "$TIMECONST_HEADER" ]; then
-            cat "$TIMECONST_HEADER"
-            exit 0
-          fi
-          exec /usr/bin/bc.real "$@"
-          SHIM
+          mv /usr/bin/bc /usr/bin/bc.real 2>/dev/null || true
+          # write the shim WITHOUT a heredoc (GHA folds heredoc indentation and can mangle
+          # the shebang -> exec 127). printf lines are byte-exact regardless of YAML fold.
+          printf '%s\n' '#!/bin/bash' \
+            'set -e' \
+            'if [ -n "$TIMECONST_HEADER" ] && [ -f "$TIMECONST_HEADER" ]; then' \
+            '  cat "$TIMECONST_HEADER"' \
+            '  exit 0' \
+            'fi' \
+            'exec /usr/bin/bc.real "$@"' > /usr/local/bin/bc
           chmod +x /usr/local/bin/bc
           export TIMECONST_HEADER=/kernelsrc/include/generated/timeconst.h
           echo "TIMECONST_HEADER=$TIMECONST_HEADER"
