@@ -48,6 +48,14 @@ jobs:
       - name: Neutralize sanitized (missing) Kconfig source lines
         run: bash "$GITHUB_WORKSPACE/fix_kconfig.sh" /kernelsrc
 
+      - name: Pre-inject timeconst.h (bypass GNU-bc hang)
+        run: |
+          mkdir -p /kernelsrc/include/generated
+          python "$GITHUB_WORKSPACE/gen_timeconst.py" 100 > /kernelsrc/include/generated/timeconst.h
+          touch -d '2099-01-01' /kernelsrc/include/generated/timeconst.h
+          head -3 /kernelsrc/include/generated/timeconst.h
+          echo TIMECONST_INJECTED
+
       - name: Configure (device.config base + FORCE=n)
         run: |
           cp "$GITHUB_WORKSPACE/build.config" /kernelsrc/.config
