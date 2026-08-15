@@ -46,7 +46,7 @@ jobs:
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
-      - name: Smoke - compiler sanity (the exact file that hung: kernel/bounds.c)
+      - name: Smoke bounds compile
         run: |
           cd /kernelsrc
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j1 kernel/bounds.s
