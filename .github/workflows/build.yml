@@ -13,6 +13,9 @@ jobs:
     steps:
       - name: Checkout this repo (workflow + build.config + fix_kconfig.sh)
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          token: \${{ github.token }}
 
       - name: Install cross toolchain + build deps
         run: |
@@ -59,9 +62,8 @@ jobs:
               ls /kernelsrc/arch/arm64/boot/ 2>/dev/null | grep Image || echo image-not-yet; } >> "$WS/beacon.log"
             git -C "$WS" add beacon.log 2>/dev/null
             git -C "$WS" commit -q -m "beacon $(date -u +%H:%M:%S)" 2>/dev/null
-            git -C "$WS" push -q origin HEAD:progress 2>/dev/null
-            sleep 180
-          done) &
+            git -C "$WS" push -q origin HEAD:progress 2>>"$WS/beacon.err" || echo "PUSHFAIL $(date -u +%H:%M:%S)" >> "$WS/beacon.err"
+            sleep 180          done) &
 
           cd /kernelsrc
           make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" Image 2>&1
