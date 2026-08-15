@@ -31,6 +31,7 @@ jobs:
             sleep 30
           done
           apt-get install -y git make gcc bison flex libssl-dev bc python3 ccache procps file curl
+          ln -sf /usr/bin/python3 /usr/bin/python || true
 
       - name: ccache cache (persist objects across runs)
         uses: actions/cache@v4
