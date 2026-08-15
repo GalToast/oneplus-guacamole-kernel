@@ -108,7 +108,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error -Wno-undef" -j1 prepare
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error -Wno-undef" V=1 -j1 prepare 2>&1 | grep -E 'asm-offsets|isystem|-I|-nostdinc|gcc-wrapper' | head -30
           test -f include/generated/autoconf.h && echo AUTOCONF_EXISTS || echo AUTOCONF_STILL_MISSING
           grep CONFIG_ARM64_PAGE_SHIFT include/generated/autoconf.h || echo NO_PAGE_SHIFT_IN_AUTOCONF
           test -s include/generated/autoconf.h && echo AUTOCONF_OK || { echo AUTOCONF_MISSING; echo "--- generated: ---"; ls include/generated/ | head; exit 1; }
