@@ -88,13 +88,17 @@ jobs:
           echo 100 | bc -q /dev/null | head -3
           head -3 /kernelsrc/include/generated/timeconst.h
           echo TIMECONST_INJECTED
-      - name: Configure (device.config base + FORCE=n)
+      - name: Configure (vendor sm8150_defconfig + FORCE=n + LOCALVERSION)
         run: |
-          cp "$GITHUB_WORKSPACE/build.config" /kernelsrc/.config
           cd /kernelsrc
+          # Use the vendor's own defconfig (the config their toolchain built successfully)
+          # instead of the device /proc/config.gz: avoids kconfig-select discrepancies that
+          # leave generated headers (asm/current.h / thread_info) without expected symbols.
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/sm8150_defconfig
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
+          ./scripts/config --set-str CONFIG_LOCALVERSION "-perf+"
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
-
+          grep -E 'CONFIG_(THREAD_INFO_IN_TASK|ARM64_VA_BITS|ARM64_PAGE_SHIFT|64BIT)=' .config | head -5
       - name: 'STAGE 1/4: prepare + scripts (headers, asm-offsets)'
         timeout-minutes: 30
         run: |
