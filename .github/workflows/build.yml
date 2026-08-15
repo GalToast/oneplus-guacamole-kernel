@@ -17,7 +17,7 @@ jobs:
       - name: Install cross toolchain + build deps
         run: |
           apt-get update
-          apt-get install -y git make gcc gcc-aarch64-linux-gnu bison flex libssl-dev bc python ccache procps file
+          apt-get install -y git make gcc gcc-aarch64-linux-gnu bison flex libssl-dev bc python ccache procps file curl
 
       - name: ccache cache (persist objects across runs)
         uses: actions/cache@v4
@@ -28,46 +28,53 @@ jobs:
 
       - name: Clone OnePlus sm8150 source @ Q-branch HEAD (4.14.117)
         run: |
-          git clone --depth 1 --branch oneplus/SM8150_Q_10.0 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8150.git kernel
-          cd kernel && git checkout 92ce282d017e
+          git clone --depth 1 --branch oneplus/SM8150_Q_10.0 https://github.com/OnePlusOSS/android_kernel_oneplus_sm8150.git /kernelsrc
+          cd /kernelsrc && git checkout 92ce282d017e
 
       - name: Neutralize sanitized (missing) Kconfig source lines
         run: bash ./fix_kconfig.sh
 
       - name: Configure (device.config base + FORCE=n)
         run: |
-          cd kernel
+          cd /kernelsrc
           cp ../build.config .config
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
       - name: Build kernel Image (streaming + live progress beacon)
         run: |
-          cd kernel
-          export CC="ccache aarch64-linux-gnu-gcc"
           export HOME=/tmp
-          git config user.email ci@example.com
-          git config user.name ci
-          # make with -pipe, no tail: stdout streams; every 120s push object probes to a progress branch
+          git config --global user.email ci@example.com
+          git config --global user.name ci
+
+          # Beacon repo: pushes object-progress into the PARENT repo 'progress' branch.
+          # GITHUB_TOKEN is write-scoped for this repo; /kernelsrc origin is OnePlus (read-only).
+          mkdir -p /beacon && cd /beacon && git init -q
+          git config user.email ci@example.com && git config user.name ci
+          echo "BEACON_BOOT $(date -u +%H:%M:%S)" > beacon.log
+
           (while true; do
-             echo "===BEACON $(date -u +%H:%M:%S)===";
-             find arch -name '*.o' -printf '%h/%f\n' 2>/dev/null | tail -3;
-             find arch -name '*.o' 2>/dev/null | wc -l;
-             python3 -c "import os;[print(os.path.getmtime(f)) for f in ['arch/arm64/boot/Image'] if os.path.exists(f)]" 2>/dev/null;
-             printf '%s beacon ok %d objs\n' "$(date -u +%H:%M:%S)" "$(find . -name '*.o' 2>/dev/null | wc -l)" >> /tmp/beacon.log;
-             git add -A 2>/dev/null; git commit -q -m "beacon $(date -u +%H:%M:%S)" 2>/dev/null;
-             git push -q origin HEAD:progress --force 2>/dev/null || true;
-             sleep 180;
-           done) &
+            { echo "===BEACON $(date -u +%H:%M:%S)===";
+              echo "objs=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)";
+              echo "arch_objs=$(find /kernelsrc/arch -name '*.o' 2>/dev/null | wc -l)";
+              ls -la /kernelsrc/arch/arm64/boot/ 2>/dev/null | grep -E 'Image' || echo "image-not-yet";
+              tail -n 2 /kernelsrc/scripts/beacon 2>/dev/null; } >> /beacon/beacon.log
+            cd /beacon && git add -A && git commit -q -m "beacon $(date -u +%H:%M:%S)" 2>/dev/null
+            git push -q "https://x-access-token:${GITHUB_TOKEN}@github.com/GalToast/oneplus-guacamole-kernel.git" HEAD:progress --force 2>/dev/null \
+              || echo "BEACON_PUSH_FAIL $(date -u +%H:%M:%S)" >> /beacon/beacon.log
+            sleep 180
+          done) &
+
+          cd /kernelsrc
           make ARCH=arm64 CROSS_COMPILE='ccache aarch64-linux-gnu-' -j"$(nproc)" Image 2>&1
           rc=$?
           echo "BUILD_RC=$rc"
-          ls -la arch/arm64/boot/Image
+          ls -la /kernelsrc/arch/arm64/boot/Image
           exit $rc
 
       - name: Show vermagic (for module vermagic-matching later)
         run: |
-          cd kernel
+          cd /kernelsrc
           strings arch/arm64/boot/Image | grep -ao '4\.14[a-zA-Z0-9._+-]* [A-Za-z0-9 ]*' | head -1 || true
           cat include/generated/utsrelease.h || true
 
@@ -75,4 +82,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kernel-image
-          path: kernel/arch/arm64/boot/Image
+          path: /kernelsrc/arch/arm64/boot/Image
