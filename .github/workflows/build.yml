@@ -11,9 +11,9 @@ on:
 jobs:
   build:
     timeout-minutes: 400
-    runs-on: ubuntu-22.04-arm
+    runs-on: ubuntu-latest
     container:
-      image: ubuntu:22.04
+      image: ubuntu:20.04
       options: --user root
     env:
       GITHUB_TOKEN_OUT: ${{ github.token }}
@@ -31,8 +31,9 @@ jobs:
             echo "apt retry $i: $(tail -1 /tmp/apt.err) $(date -u +%H:%M:%S)"
             sleep 30
           done
-          apt-get install -y git make gcc bison flex libssl-dev python3 ccache procps file curl
-          apt-get install -y python2 2>/dev/null || echo '(python2 unavailable on this dist - py3 fallback)'          # vendor gcc-wrapper.py uses py2 syntax (print >>) - need python2 as 'python'
+          apt-get install -y git make gcc gcc-aarch64-linux-gnu bison flex libssl-dev python3 ccache procps file curl
+          apt-get install -y python2 2>/dev/null || echo '(python2 unavailable on this dist - py3 fallback)'
+          # vendor gcc-wrapper.py uses py2 syntax (print >>) - need python2 as 'python'
           if [ -x /usr/bin/python2 ]; then ln -sf /usr/bin/python2 /usr/bin/python; else ln -sf /usr/bin/python3 /usr/bin/python; fi
           python --version
 
@@ -86,14 +87,14 @@ jobs:
           cp "$GITHUB_WORKSPACE/build.config" /kernelsrc/.config
           cd /kernelsrc
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
-          make ARCH=arm64 CROSS_COMPILE= olddefconfig
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
       - name: 'STAGE 1/4: prepare + scripts (headers, asm-offsets)'
         timeout-minutes: 30
         run: |
           mkdir -p /oneplus   # OnePlus Makefile: cp $(KBUILD_SRC)/../oneplus -> parent; empty stub satisfies it
           cd /kernelsrc
-          export CC=gcc
+          export CC=aarch64-linux-gnu-gcc
 
           (while true; do
             O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
@@ -101,7 +102,7 @@ jobs:
             sleep 45
           done) &
 
-          touch .config && make ARCH=arm64 CROSS_COMPILE= KCFLAGS="-Wno-undef" -j"$(nproc)" prepare
+          touch .config && make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-undef" -j"$(nproc)" prepare
           grep CONFIG_ARM64_PAGE_SHIFT include/generated/autoconf.h || echo NO_PAGE_SHIFT_IN_AUTOCONF
           test -s include/generated/autoconf.h && echo AUTOCONF_OK || { echo AUTOCONF_MISSING; echo "--- generated: ---"; ls include/generated/ | head; exit 1; }
           echo "MARK STAGE1 DONE $(date -u +%H:%M:%S)"
@@ -110,7 +111,7 @@ jobs:
         run: |
           mkdir -p /oneplus
           cd /kernelsrc
-          export CC=gcc
+          export CC=aarch64-linux-gnu-gcc
 
           (while true; do
             O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
@@ -118,7 +119,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE= KCFLAGS="-Wno-undef" -j"$(nproc)" kernel/ init/ mm/ arch/arm64/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-undef" -j"$(nproc)" kernel/ init/ mm/ arch/arm64/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
           echo "MARK STAGE2 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 3: drivers/net/wireless + net (broad)'
@@ -126,7 +127,7 @@ jobs:
         run: |
           mkdir -p /oneplus
           cd /kernelsrc
-          export CC=gcc
+          export CC=aarch64-linux-gnu-gcc
 
           (while true; do
             O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
@@ -134,7 +135,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE= KCFLAGS="-Wno-undef" -j"$(nproc)" drivers/net/ drivers/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-undef" -j"$(nproc)" drivers/net/ drivers/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
           echo "MARK STAGE3 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 4: full Image (remaining drivers + link)'
@@ -142,7 +143,7 @@ jobs:
         run: |
           mkdir -p /oneplus
           cd /kernelsrc
-          export CC=gcc
+          export CC=aarch64-linux-gnu-gcc
 
           (while true; do
             O=$(find /kernelsrc -name '*.o' 2>/dev/null | wc -l)
@@ -150,7 +151,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE= KCFLAGS="-Wno-undef" -j"$(nproc)" Image 2>&1 | tee -a /kernelsrc/build.log | tail -8
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-undef" -j"$(nproc)" Image 2>&1 | tee -a /kernelsrc/build.log | tail -8
           rc=$?
           echo "MARK STAGE4 rc=$rc $(date -u +%H:%M:%S)"
           ls -la arch/arm64/boot/Image
