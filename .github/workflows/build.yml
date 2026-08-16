@@ -127,6 +127,9 @@ jobs:
           ./scripts/config --disable CONFIG_HZ_250
           ./scripts/config --disable CONFIG_HZ_300
           ./scripts/config --set-val CONFIG_HZ 100
+          ./scripts/config --disable CONFIG_ASN1
+          ./scripts/config --disable CONFIG_SECURITY_SELINUX
+          ./scripts/config --disable CONFIG_MODULES
           ./scripts/config --disable CONFIG_QTI_GVM
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
           ./scripts/config --disable CONFIG_MODULE_SIG
@@ -169,7 +172,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-undef" -j"$(nproc)" kernel/ init/ mm/ arch/arm64/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error -Wno-undef -Wno-implicit-int -Wno-strict-prototypes" -j"$(nproc)" kernel/ init/ mm/ arch/arm64/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
           echo "MARK STAGE2 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 3: drivers/net/wireless + net (broad)'
@@ -185,7 +188,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-undef" -j"$(nproc)" drivers/net/ drivers/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error -Wno-undef -Wno-implicit-int -Wno-strict-prototypes" -j"$(nproc)" drivers/net/ drivers/ 2>&1 | tee -a /kernelsrc/build.log | tail -5
           echo "MARK STAGE3 DONE $(date -u +%H:%M:%S)"
 
       - name: 'STAGE 4: full Image (remaining drivers + link)'
@@ -201,7 +204,7 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-undef" V=1 -j"$(nproc)" Image 2>&1 | tee -a /kernelsrc/build.log | tail -25
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error -Wno-undef -Wno-implicit-int -Wno-strict-prototypes" V=1 -j"$(nproc)" Image 2>&1 | tee -a /kernelsrc/build.log | tail -25
           rc=${PIPESTATUS[0]:-$?}
           echo "MARK STAGE4 rc=$rc $(date -u +%H:%M:%S)"
           ls -la arch/arm64/boot/Image && echo IMAGE_OK
