@@ -95,6 +95,9 @@ jobs:
       - name: Configure (vendor sm8150_defconfig + FORCE=n + LOCALVERSION)
         run: |
           cd /kernelsrc
+          # Scrub any CRLF git-smuggle (break kconfig/bc) - git on Windows/gitattributes edge
+          find . -name Kconfig -print0 | xargs -0 sed -i 's/$//' 2>/dev/null || true
+          find . -name '*.bc' -print0 | xargs -0 sed -i 's/$//' 2>/dev/null || true
           # Use the vendor's own defconfig (the config their toolchain built successfully)
           # instead of the device /proc/config.gz: avoids kconfig-select discrepancies that
           # leave generated headers (asm/current.h / thread_info) without expected symbols.
@@ -102,13 +105,25 @@ jobs:
           # Inject device-truth arch symbols (from the actual phone /proc/config.gz):
           # CONFIG_ARM64=y CONFIG_64BIT=y CONFIG_SMP=y CONFIG_ARM64_4K_PAGES=y
           # CONFIG_ARM64_PAGE_SHIFT=12 CONFIG_ARM64_VA_BITS=39
+          # THE ROOT-CAUSE FIX: sanitizer must never kill source "arch/$SRCARCH/Kconfig"
+          python3 - <<'PYF'
+          p = 'Kconfig'
+          b = open(p, 'rb').read()
+          b = b.replace(b'# SANITIZED-MISSING: source "arch/$SRCARCH/Kconfig"', b'source "arch/$SRCARCH/Kconfig"')
+          open(p, 'wb').write(b)
+          PYF
           ./scripts/config --enable CONFIG_ARM64
           ./scripts/config --enable CONFIG_64BIT
           ./scripts/config --enable CONFIG_SMP
           ./scripts/config --enable CONFIG_ARM64_4K_PAGES
+          ./scripts/config --enable CONFIG_ARM64_VA_BITS_39
+          ./scripts/config --disable CONFIG_ARM64_16K_PAGES
+          ./scripts/config --disable CONFIG_ARM64_64K_PAGES
           ./scripts/config --set-val CONFIG_ARM64_PAGE_SHIFT 12
           ./scripts/config --set-val CONFIG_ARM64_VA_BITS 39
+          ./scripts/config --disable CONFIG_QTI_GVM
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
+          ./scripts/config --disable CONFIG_MODULE_SIG
           ./scripts/config --disable CONFIG_GCC_WERROR
           ./scripts/config --set-str CONFIG_LOCALVERSION "-perf+"
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
