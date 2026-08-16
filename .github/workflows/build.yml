@@ -101,9 +101,12 @@ jobs:
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/sm8150_defconfig
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
           ./scripts/config --disable CONFIG_GCC_WERROR
+          ./scripts/config --enable CONFIG_64BIT
+          ./scripts/config --enable CONFIG_SMP
           ./scripts/config --set-str CONFIG_LOCALVERSION "-perf+"
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
-          grep -E 'CONFIG_(THREAD_INFO_IN_TASK|ARM64_VA_BITS|ARM64_PAGE_SHIFT|64BIT)=' .config | head -5
+          grep -E 'CONFIG_(THREAD_INFO_IN_TASK|ARM64_VA_BITS|ARM64_PAGE_SHIFT|64BIT|SMP)=' .config | head -7
+          grep -E 'CONFIG_(64BIT|SMP)=' include/generated/autoconf.h 2>/dev/null | head -4
       - name: 'STAGE 1/4: prepare + scripts (headers, asm-offsets)'
         timeout-minutes: 30
         run: |
