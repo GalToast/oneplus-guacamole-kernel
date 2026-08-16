@@ -140,6 +140,7 @@ jobs:
           echo DIAG-CONFIG-DONE >> /kernelsrc/build.log
       - name: 'STAGE 1/4: prepare + scripts (headers, asm-offsets)'
         timeout-minutes: 45
+        shell: bash
         run: |
           set -o pipefail
           mkdir -p /oneplus   # OnePlus Makefile: cp $(KBUILD_SRC)/../oneplus -> vendor dir; empty stub satisfies it
@@ -163,6 +164,7 @@ jobs:
           exit $rc
       - name: 'STAGE 2: arch + kernel + init + mm (core)'
         timeout-minutes: 30
+        shell: bash
         run: |
           mkdir -p /oneplus
           cd /kernelsrc
@@ -179,6 +181,7 @@ jobs:
 
       - name: 'STAGE 3: drivers/net/wireless + net (broad)'
         timeout-minutes: 30
+        shell: bash
         run: |
           mkdir -p /oneplus
           cd /kernelsrc
@@ -195,6 +198,7 @@ jobs:
 
       - name: 'STAGE 4: full Image (remaining drivers + link)'
         timeout-minutes: 30
+        shell: bash
         run: |
           mkdir -p /oneplus
           cd /kernelsrc
