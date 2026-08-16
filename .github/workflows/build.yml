@@ -136,9 +136,10 @@ jobs:
           grep -E 'CONFIG_(ARM64|64BIT|SMP|ARM64_4K_PAGES|ARM64_PAGE_SHIFT|ARM64_VA_BITS)=' .config | tail -12 | tee -a /kernelsrc/build.log
           echo DIAG-CONFIG-DONE >> /kernelsrc/build.log
       - name: 'STAGE 1/4: prepare + scripts (headers, asm-offsets)'
-        timeout-minutes: 30
+        timeout-minutes: 45
         run: |
-          mkdir -p /oneplus   # OnePlus Makefile: cp $(KBUILD_SRC)/../oneplus -> parent; empty stub satisfies it
+          set -o pipefail
+          mkdir -p /oneplus   # OnePlus Makefile: cp $(KBUILD_SRC)/../oneplus -> vendor dir; empty stub satisfies it
           cd /kernelsrc
           export CC=aarch64-linux-gnu-gcc
 
