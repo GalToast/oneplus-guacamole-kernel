@@ -99,14 +99,21 @@ jobs:
           # instead of the device /proc/config.gz: avoids kconfig-select discrepancies that
           # leave generated headers (asm/current.h / thread_info) without expected symbols.
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/sm8150_defconfig
-          ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
-          ./scripts/config --disable CONFIG_GCC_WERROR
+          # Inject device-truth arch symbols (from the actual phone /proc/config.gz):
+          # CONFIG_ARM64=y CONFIG_64BIT=y CONFIG_SMP=y CONFIG_ARM64_4K_PAGES=y
+          # CONFIG_ARM64_PAGE_SHIFT=12 CONFIG_ARM64_VA_BITS=39
+          ./scripts/config --enable CONFIG_ARM64
           ./scripts/config --enable CONFIG_64BIT
           ./scripts/config --enable CONFIG_SMP
+          ./scripts/config --enable CONFIG_ARM64_4K_PAGES
+          ./scripts/config --set-val CONFIG_ARM64_PAGE_SHIFT 12
+          ./scripts/config --set-val CONFIG_ARM64_VA_BITS 39
+          ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
+          ./scripts/config --disable CONFIG_GCC_WERROR
           ./scripts/config --set-str CONFIG_LOCALVERSION "-perf+"
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
-          grep -E 'CONFIG_(THREAD_INFO_IN_TASK|ARM64_VA_BITS|ARM64_PAGE_SHIFT|64BIT|SMP)=' .config | head -7
-          grep -E 'CONFIG_(64BIT|SMP)=' include/generated/autoconf.h 2>/dev/null | head -4
+          grep -E 'CONFIG_(ARM64|64BIT|SMP|ARM64_4K_PAGES|ARM64_PAGE_SHIFT|ARM64_VA_BITS)=' .config | tail -12 | tee -a /kernelsrc/build.log
+          echo DIAG-CONFIG-DONE >> /kernelsrc/build.log
       - name: 'STAGE 1/4: prepare + scripts (headers, asm-offsets)'
         timeout-minutes: 30
         run: |
@@ -120,11 +127,12 @@ jobs:
             sleep 45
           done) &
 
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error -Wno-undef" V=1 -j1 prepare 2>&1 | grep -E 'asm-offsets|isystem|-I|-nostdinc|gcc-wrapper' | head -30
-          test -f include/generated/autoconf.h && echo AUTOCONF_EXISTS || echo AUTOCONF_STILL_MISSING
-          grep CONFIG_ARM64_PAGE_SHIFT include/generated/autoconf.h || echo NO_PAGE_SHIFT_IN_AUTOCONF
-          test -s include/generated/autoconf.h && echo AUTOCONF_OK || { echo AUTOCONF_MISSING; echo "--- generated: ---"; ls include/generated/ | head; exit 1; }
-          echo "MARK STAGE1 DONE $(date -u +%H:%M:%S)"
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error -Wno-undef" V=1 -j1 prepare 2>&1 | tee -a /kernelsrc/build.log
+          rc=${PIPESTATUS[0]:-$?}
+          echo "MARK STAGE1 rc=$rc $(date -u +%H:%M:%S)" | tee -a /kernelsrc/build.log
+          grep -E 'CONFIG_(ARM64|64BIT|SMP|ARM64_VA_BITS|ARM64_PAGE_SHIFT)=' include/generated/autoconf.h | head -8 | tee -a /kernelsrc/build.log
+          test -s include/generated/autoconf.h && echo AUTOCONF_OK >> /kernelsrc/build.log || { echo AUTOCONF_MISSING_EMPTY >> /kernelsrc/build.log; ls -la include/generated/ >> /kernelsrc/build.log; }
+          exit $rc
       - name: 'STAGE 2: arch + kernel + init + mm (core)'
         timeout-minutes: 30
         run: |
