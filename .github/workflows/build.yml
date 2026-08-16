@@ -151,6 +151,7 @@ jobs:
 
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error -Wno-undef" V=1 -j1 prepare 2>&1 | tee -a /kernelsrc/build.log
           rc=${PIPESTATUS[0]:-$?}
+          if [ $rc -ne 0 ]; then echo '=== PREPARE FAILED, last 30 log lines ==='; tail -30 /kernelsrc/build.log; fi
           echo "MARK STAGE1 rc=$rc $(date -u +%H:%M:%S)" | tee -a /kernelsrc/build.log
           grep -E 'CONFIG_(ARM64|64BIT|SMP|ARM64_VA_BITS|ARM64_PAGE_SHIFT)=' include/generated/autoconf.h | head -8 | tee -a /kernelsrc/build.log
           test -s include/generated/autoconf.h && echo AUTOCONF_OK >> /kernelsrc/build.log || { echo AUTOCONF_MISSING_EMPTY >> /kernelsrc/build.log; ls -la include/generated/ >> /kernelsrc/build.log; }
