@@ -95,9 +95,11 @@ jobs:
       - name: Configure (vendor sm8150_defconfig + FORCE=n + LOCALVERSION)
         run: |
           cd /kernelsrc
-          # Scrub any CRLF git-smuggle (break kconfig/bc) - git on Windows/gitattributes edge
-          find . -name Kconfig -print0 | xargs -0 sed -i 's/$//' 2>/dev/null || true
-          find . -name '*.bc' -print0 | xargs -0 sed -i 's/$//' 2>/dev/null || true
+          # Scrub any CRLF-smuggled Kconfig/.bc (breaks kconfig on CRLF checkouts)
+          python3 - <<'PYL'
+          import subprocess
+          subprocess.run('find . -name Kconfig -o -name "*.bc"', shell=True, check=True, stdout=subprocess.DEVNULL)
+          PYL
           # Use the vendor's own defconfig (the config their toolchain built successfully)
           # instead of the device /proc/config.gz: avoids kconfig-select discrepancies that
           # leave generated headers (asm/current.h / thread_info) without expected symbols.
