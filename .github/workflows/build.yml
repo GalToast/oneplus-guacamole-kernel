@@ -123,6 +123,10 @@ jobs:
           ./scripts/config --disable CONFIG_ARM64_64K_PAGES
           ./scripts/config --set-val CONFIG_ARM64_PAGE_SHIFT 12
           ./scripts/config --set-val CONFIG_ARM64_VA_BITS 39
+          ./scripts/config --enable CONFIG_HZ_100
+          ./scripts/config --disable CONFIG_HZ_250
+          ./scripts/config --disable CONFIG_HZ_300
+          ./scripts/config --set-val CONFIG_HZ 100
           ./scripts/config --disable CONFIG_QTI_GVM
           ./scripts/config --disable CONFIG_MODULE_SIG_FORCE
           ./scripts/config --disable CONFIG_MODULE_SIG
